@@ -1,7 +1,8 @@
 import argparse
 import pprint
 
-import cPickle as pickle
+#import cPickle as pickle #For Python 2
+import pickle #2024.11.12 edited, Python 3 
 import math
 
 from utils import *
@@ -40,42 +41,19 @@ def read_aligned_reads(reads_fname, shift, bin_size, chrom_lengths=None):
 
     echo('Reading reads from:', reads_fname)
     skipped = 0
-    skipped_chromosomes = set()
-
     with open_file(reads_fname) as in_f:
         for line in in_f:
-            if line.startswith('#'):
-                continue
-
             buf = line.strip().split()
-
-            if len(buf) < 4:
-                error('Incorrect format of input file:', reads_fname + '\nLine: ' + line +
-                      'Aligned reads should be in BED format: \n'
-                      '"chromosome\tstart\tend\tstrand" or "chromosome\tstart\tend\tname\tscore\tstrand"')
 
             chrom = buf[0]
 
-            try:
-                start = int(buf[1])
-            except ValueError:
-                error("Start coordinate should be integer:", line)
-
-            try:
-                end = int(buf[2])
-            except ValueError:
-                error("End coordinate should be integer:", line)
-
-            if end < start:
-                error('Start coordinate is greater than end coordinate for line:', line)
+            start = int(buf[1])
+            end = int(buf[2])
 
             if len(buf) == 4:
                 strand = buf[3]
             else:
                 strand = buf[5]
-
-            if strand not in ['+', '-']:
-                error('Strand should be one of [+, -]:', line)
 
             if strand == '+':
                 read_start = (start + shift) / bin_size
@@ -83,10 +61,6 @@ def read_aligned_reads(reads_fname, shift, bin_size, chrom_lengths=None):
                 read_start = (end - shift) / bin_size
 
             if chrom not in read_counts or read_start < 0 or read_start >= len(read_counts[chrom]):
-
-                if chrom not in read_counts:
-                    skipped_chromosomes.add(chrom)
-
                 skipped += 1
                 continue
 
@@ -94,19 +68,8 @@ def read_aligned_reads(reads_fname, shift, bin_size, chrom_lengths=None):
             total_reads += 1
 
     echo('Total reads used for peak calling:', total_reads)
-
     if skipped > 0:
-        echo('WARNING: Skipped reads outside of chromosome boundaries:', skipped)
-
-        if len(skipped_chromosomes) > 0:
-            echo('WARNING: Input file contains reads from non-standard chromosomes, which will be skipped:',
-                 str(sorted(skipped_chromosomes)) + '\nStandard chromosomes for this genome assembly are:',
-                 sorted(chrom_lengths))
-
-    if total_reads == 0:
-        error(reads_fname, 'has no sequencing reads that map to standard chromosomes for this genome assembly. '
-              'Please check the input file!')
-
+        echo('Skipped reads outside of chromosome boundaries:', skipped)
     return read_counts, total_reads
 
 
@@ -644,6 +607,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='ChromTime: Modeling Spatio-temporal Dynamics of Chromatin Marks')
 
+
     g1 = parser.add_argument_group('Input data from command line')
     g1.add_argument('-a',
                     '--aligned-reads',
@@ -669,9 +633,9 @@ if __name__ == '__main__':
                     '--mode',
                     dest='mode',
                     choices=['punctate', 'narrow', 'broad'],
-                    default=None,
+                    default='narrow',
                     help='punctate: equivalent to \"-b 200 --min-gap 600 --min-dynamic-prior 0.05\", '
-                         'narrow: equivalent to \"-b 200 --min-gap 600 --min-dynamic-prior 0\", '
+                         'narrow (default): equivalent to \"-b 200 --min-gap 600 --min-dynamic-prior 0\", '
                          'broad: equivalent to \"-b 500 --min-gap 1500 --merge-peaks --min-dynamic-prior 0\"')
 
     g3.add_argument("-g", "--genome", dest="genome",
@@ -921,7 +885,6 @@ if __name__ == '__main__':
                            fdr_for_decoding=args.fdr_for_decoding,
                            output_empty_blocks=args.output_empty_blocks,
                            update_priors=not args.keep_fixed_priors,
-                           min_dynamic_prior=args.min_dynamic_prior,
-                           ignore_decreasing_LL_error=True)
+                           min_dynamic_prior=args.min_dynamic_prior)
 
     close_log()

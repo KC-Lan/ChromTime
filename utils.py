@@ -2,7 +2,8 @@
     Here is the place to put utility methods that are shared by the modules.
 """
 import gzip
-from itertools import izip
+#from itertools import izip #Python 2
+from itertools import zip_longest #2024.11.12 edited Python 3
 import json
 import os
 import re
@@ -42,8 +43,8 @@ def error(*msg):
     exit(1)
 
 
-_rc_trans = string.maketrans('ACGT', 'TGCA')
-
+#_rc_trans = string.maketrans('ACGT', 'TGCA') #Python 2
+_rc_trans = str.maketrans('ACGT', 'TGCA') #2024.11.12 edited Python 3
 
 def reverse_compl_seq(strseq):
     """ Returns the reverse complement of a DNA sequence
@@ -66,7 +67,7 @@ def elapsed(message = None):
     """ Measures how much time has elapsed since the last call of this method and the beginning of the execution.
         If 'message' is given, the message is printed out with the times.
     """
-    print "[Last: " + str(datetime.datetime.now() - elapsed.stime) + ', Elapsed time: '+str(datetime.datetime.now() - global_stime)+ "] %s" % message if message is not None else ""
+    print("[Last: " + str(datetime.datetime.now() - elapsed.stime) + ', Elapsed time: '+str(datetime.datetime.now() - global_stime)+ "] %s" % message if message is not None else "")
     elapsed.stime = datetime.datetime.now()
 elapsed.stime = datetime.datetime.now()
 
@@ -81,7 +82,7 @@ def open_log(fname):
 def logm(message):
     """ Logs a message with a time stamp to the log file opened by open_log
     """
-    print "[%s] %s" % (datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'), message)
+    print("[%s] %s" % (datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'), message))
     open_log.logfile.write("[ %s ] %s\n" % (datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'), message))
 
 ECHO_TO_SCREEN = 1
@@ -89,7 +90,7 @@ ECHO_TO_LOGFILE = 1
 def echo(*message, **kwargs):
     to_print = "[%s] %s" % (datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'), ' '.join(map(str, message)))
     if kwargs.get('level', ECHO_TO_SCREEN) == ECHO_TO_SCREEN:
-        print to_print
+        print(to_print)
 
     if hasattr(open_log, 'logfile'):
         open_log.logfile.write(to_print + '\n')

@@ -1,14 +1,16 @@
 import argparse
 import gzip
 import traceback
-from itertools import izip
+#from itertools import izip #Python 2
+izip = zip #2024.11.12 edit Python 3
 import os
 import pprint
 import random
 import sys
 import math
 import itertools
-import cPickle as pickle
+#import cPickle as pickle #Python 2
+import pickle #2024.11.12 edit Python 3
 from multiprocessing import Pool
 from utils import *
 from constants import *
@@ -122,7 +124,7 @@ def read_block_wig_signal(input_fnames, block_boundaries, bin_size):
 
             rescale_step = bin_size / span
             if rescale_step == 0:
-                print 'ERROR: span and bin_size are incompatible:', span, bin_size
+                print('ERROR: span and bin_size are incompatible:', span, bin_size)
                 exit(1)
 
             # rescale the signal if necessary
@@ -1139,8 +1141,8 @@ class ClusterModel:
 
         print >>sys.stderr, "\n"
         self.fdr_threshold_for_decoding = [None] * self.n_timepoints
-        for t in xrange(self.n_timepoints):
 
+        for t in xrange(self.n_timepoints):
             sorted_no_peak_probs = sorted(no_peak_probs[t])
             n = len(sorted_no_peak_probs)
 
@@ -1151,7 +1153,7 @@ class ClusterModel:
 
         echo('FDR threshold for decoding:', self.fdr_threshold_for_decoding)
 
-    def EM(self, blocks, MIN_DELTA_LOG_LIKELIHOOD=None, echo_level=ECHO_TO_SCREEN, bruteforce_debug=False, ignore_decreasing_LL_error=False):
+    def EM(self, blocks, MIN_DELTA_LOG_LIKELIHOOD=None, echo_level=ECHO_TO_SCREEN, bruteforce_debug=False):
 
         n_timepoints = self.n_timepoints
 
@@ -1213,11 +1215,6 @@ class ClusterModel:
                 echo('EM Iteration: %d\tDelta Log Likelihood:' % EM_iteration, delta_likelihood, level=echo_level)
 
                 if delta_likelihood < 0:
-
-                    if ignore_decreasing_LL_error:
-                        echo('WARNING: Log likelihood has decreased. Stopping EM.')
-                        break
-
                     echo('**** ERROR!!! ****')
 
                     if bruteforce_debug:
@@ -1397,7 +1394,7 @@ class ClusterModel:
         """ This method is used only for debugging purposes """
 
         datapoints = []
-        print 'min-max block length:', min(all_blocks[b][BLOCK_LENGTH] for b in all_blocks), max(all_blocks[b][BLOCK_LENGTH] for b in all_blocks)
+        print('min-max block length:', min(all_blocks[b][BLOCK_LENGTH] for b in all_blocks), max(all_blocks[b][BLOCK_LENGTH] for b in all_blocks))
 
         for block_no, block_id in enumerate(all_blocks.keys()):
             if block_no % 100 == 0:
@@ -1458,7 +1455,7 @@ class ClusterModel:
                 datapoints.append((e.delta_log_likelihood, e.blocks))
             # exit(1)
 
-        print sorted(datapoints)
+        print(sorted(datapoints))
 
         exit(1)
 
@@ -1724,7 +1721,8 @@ class ClusterModel:
                      RIGHT_BOUNDARY: [None] * n_timepoints}
 
         best_start, best_end = max([(s, e) for s in xrange(block_length + 1) for e in xrange(s, block_length + 1)],
-                                   key=lambda (s, e): DP[n_timepoints - 1][s][e])
+                                   #key=lambda (s, e): DP[n_timepoints - 1][s][e]) #Python 2
+                                   key=lambda s_e: DP[n_timepoints - 1][s_e[0]][s_e[1]]) #2024.11.12 edited Python 3
 
         combo_likelihood = DP[n_timepoints - 1][best_start][best_end]
 
@@ -2352,9 +2350,10 @@ def worker(args):
         func = args[0]
         return func(*args[1:])
 
-    except Exception, e:
-        print 'Caught exception in output worker thread (pid: %d):' % os.getpid()
-        print func
+    #except Exception, e: #Python 2
+    except Exception as e: #2024.11.12 edited Python 3
+        print('Caught exception in output worker thread (pid: %d):' % os.getpid())
+        print(func)
 
         echo(e)
         if hasattr(open_log, 'logfile'):
@@ -2412,15 +2411,15 @@ def EM_batch(model, batch, batch_no):
             total_likelihood += block_likelihood
 
         except UnderflowException:
-            print 'underflow:', batch_no, b_idx, block
+            print('underflow:', batch_no, b_idx, block)
             underflows.append(block[BLOCK_ID])
 
         if any(math.isnan(v) or math.isinf(v) for d in xrange(model.n_dynamics) for v in block_param_info[TOTAL_POSTERIORS_PER_DYNAMIC][d]):
-            print b_idx, block[BLOCK_ID], block
+            print(b_idx, block[BLOCK_ID], block)
             exit(1)
 
         if block_likelihood is not None and (math.isinf(block_likelihood) or math.isnan(block_likelihood)):
-            print 'log likelihood is nan:', block_likelihood, b_idx, block[BLOCK_ID], block
+            print('log likelihood is nan:', block_likelihood, b_idx, block[BLOCK_ID], block)
             exit(1)
 
     model.free_caches()
@@ -2655,8 +2654,7 @@ def call_boundary_dynamics(blocks,
                            fdr_for_decoding=0.05,
                            output_empty_blocks=False,
                            update_priors=True,
-                           min_dynamic_prior=0.0,
-                           ignore_decreasing_LL_error=False):
+                           min_dynamic_prior=0.0):
 
     _blk = blocks.values()[0]
     n_timepoints = len(_blk[FOREGROUND_SIGNAL])
@@ -2695,8 +2693,7 @@ def call_boundary_dynamics(blocks,
     theModel.print_model()
 
     if not skip_training:
-        theModel.EM(dict((block_id, blocks[block_id]) for block_id in block_ids_for_training),
-                    ignore_decreasing_LL_error=ignore_decreasing_LL_error)
+        theModel.EM(dict((block_id, blocks[block_id]) for block_id in block_ids_for_training))
         # theModel.EM_bruteforce_debug(dict((block_id, blocks[block_id]) for block_id in block_ids_for_training))
 
     # theModel.EM_bruteforce_debug(dict((block_id, blocks[block_id]) for block_id in block_ids_for_training),
