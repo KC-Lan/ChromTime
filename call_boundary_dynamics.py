@@ -21,6 +21,7 @@ import ctypes
 clib = ctypes.CDLL(os.path.join(os.path.split(__file__)[0],
                                 'C_call_boundary_dynamics.so'))
 
+#2024.11.15 edited, all "xrange()" change to "range()" for Python3
 
 def log_poisson_pmf(k, Lambda):
 
@@ -96,7 +97,9 @@ def read_bed(bed_fname, bin_size, filter_min=0, filter_max=None):
 
 def read_block_wig_signal(input_fnames, block_boundaries, bin_size):
 
-    block_signal = dict((reg_id, [[] for _ in xrange(len(input_fnames))]) for reg_id in block_boundaries)
+    #block_signal = dict((reg_id, [[] for _ in range(len(input_fnames))]) for reg_id in block_boundaries) #Python2
+    #2024.11.15 edited, all "xrange()" change to "range()" for Python3
+    block_signal = dict((reg_id, [[] for _ in range(len(input_fnames))]) for reg_id in block_boundaries)
 
     for t_idx, reps_fnames in enumerate(input_fnames):
 
@@ -128,9 +131,10 @@ def read_block_wig_signal(input_fnames, block_boundaries, bin_size):
                 exit(1)
 
             # rescale the signal if necessary
+            #2024.11.15 edited, all "xrange()" change to "range()" for Python3
             for chrom in wig_signal:
                 wig_signal[chrom] = [mean(wig_signal[chrom][bin_pos: bin_pos + rescale_step])
-                                        for bin_pos in xrange(0, len(wig_signal[chrom]), rescale_step)]
+                                        for bin_pos in range(0, len(wig_signal[chrom]), rescale_step)]
 
             # extract the signal for all regions
             for reg_id in block_boundaries:
@@ -192,12 +196,13 @@ class ClusterModel:
         self.foreground_delta = [1.] * n_timepoints
         self.background_delta = [1.] * n_timepoints
 
-        self.dynamics_params = [[[0, 0] if dyn == STEADY else [1, 0] for _ in xrange(n_timepoints - 1)]
+        #2024.11.15 edited, all "xrange()" change to "range()" for Python3
+        self.dynamics_params = [[[0, 0] if dyn == STEADY else [1, 0] for _ in range(n_timepoints - 1)]
                         for dyn in self.dynamics]
         self.n_dynamics_params = 2
 
         # array for the prior probabilities of dynamics
-        self.dynamic_priors = [[1. / 3] * (n_timepoints - 1) for _ in xrange(self.n_dynamics)]
+        self.dynamic_priors = [[1. / 3] * (n_timepoints - 1) for _ in range(self.n_dynamics)]
 
 
     def init_caches(self, blocks):
@@ -229,14 +234,16 @@ class ClusterModel:
         else:
             model_fname = self.model_fname
 
-        with open(model_fname, 'w') as model_f:
+        #with open(model_fname, 'w') as model_f: #Python2
+        with open(model_fname, 'wb') as model_f: #2024.11.15 edit Python3
             pickle.dump(self.__dict__, model_f)
 
+    #2024.11.15 edited, all "xrange()" change to "range()" for Python3
     def print_model(self):
         to_print = '\nForeground:\nDeltas\n' + '\t'.join(['%.10lf' % v for v in self.foreground_delta]) + '\n'
-        to_print += 'Betas\n' + '\n'.join(['\t'.join('%.10lf' % self.foreground_betas[t][i] for t in xrange(self.n_timepoints)) for i in xrange(self.n_covariates)]) + '\n'
+        to_print += 'Betas\n' + '\n'.join(['\t'.join('%.10lf' % self.foreground_betas[t][i] for t in range(self.n_timepoints)) for i in range(self.n_covariates)]) + '\n'
         to_print += '\nBackground:\nDeltas\n' + '\t'.join(['%.10lf' % v for v in self.background_delta]) + '\n'
-        to_print += 'Betas\n' + '\n'.join(['\t'.join('%.10lf' % self.background_betas[t][i] for t in xrange(self.n_timepoints)) for i in xrange(self.n_covariates)]) + '\n'
+        to_print += 'Betas\n' + '\n'.join(['\t'.join('%.10lf' % self.background_betas[t][i] for t in range(self.n_timepoints)) for i in range(self.n_covariates)]) + '\n'
 
         for dyn_idx, dyn in enumerate(self.dynamics):
             to_print += 'Dynamic:' + dyn + '\n'
@@ -300,7 +307,8 @@ class ClusterModel:
         emission_cache = cube(n_timepoints, block_length + 1, block_length + 1, default=-float('inf'))
         # return emission_cache
 
-        for t_idx in xrange(n_timepoints):
+        #2024.11.15 edited, all "xrange()" change to "range()" for Python3
+        for t_idx in range(n_timepoints):
             cur_cache = emission_cache[t_idx]
 
             t_fgr_signal = block_fgr[t_idx]
@@ -310,7 +318,7 @@ class ClusterModel:
 
             left_flanking_log_prob = 0
 
-            for start in xrange(block_length + 1):
+            for start in range(block_length + 1):
                 peak_log_prob = 0
 
                 if start > 0:
@@ -318,7 +326,7 @@ class ClusterModel:
 
                 right_flanking_log_prob = all_background_log_prob - left_flanking_log_prob
 
-                for end in xrange(start, block_length + 1):
+                for end in range(start, block_length + 1):
 
                     if start == end:
                         cur_cache[start][end] = all_background_log_prob
@@ -332,21 +340,22 @@ class ClusterModel:
 
         return emission_cache # left_flanking_reads, right_flanking_reads
 
+    #2024.11.15 edited, all "xrange()" change to "range()" for Python3
     def forward(self, emission_cache, n_timepoints, block_length):
 
-        result = [matrix(block_length + 1, block_length + 1, default=-float('inf')) for _ in xrange(n_timepoints)]
+        result = [matrix(block_length + 1, block_length + 1, default=-float('inf')) for _ in range(n_timepoints)]
         result[0] = matcopy(emission_cache[0])
 
-        for t in xrange(1, n_timepoints):
+        for t in range(1, n_timepoints):
 
-            for cur_start in xrange(block_length + 1):
+            for cur_start in range(block_length + 1):
 
-                for cur_end in xrange(cur_start, block_length + 1):
+                for cur_end in range(cur_start, block_length + 1):
 
                     gamma = -float('inf')
 
-                    for prev_start in xrange(block_length + 1):
-                        for prev_end in xrange(prev_start, block_length + 1):
+                    for prev_start in range(block_length + 1):
+                        for prev_end in range(prev_start, block_length + 1):
 
                             log_prob = result[t - 1][prev_start][prev_end] + \
                                        self.boundary_movement_model(prev_start - cur_start, t - 1, return_log=True) + \
@@ -359,22 +368,23 @@ class ClusterModel:
 
         return result
 
+    #2024.11.15 edited, all "xrange()" change to "range()" for Python3
     def backward(self, emission_cache, n_timepoints, block_length):
 
-        result = [matrix(block_length + 1, block_length + 1, default=-float('inf')) for _ in xrange(n_timepoints)]
-        for cur_start in xrange(block_length + 1):
-            for cur_end in xrange(cur_start, block_length + 1):
+        result = [matrix(block_length + 1, block_length + 1, default=-float('inf')) for _ in range(n_timepoints)]
+        for cur_start in range(block_length + 1):
+            for cur_end in range(cur_start, block_length + 1):
                 result[-1][cur_start][cur_end] = 0
 
-        for t in reversed(xrange(n_timepoints - 1)):
+        for t in reversed(range(n_timepoints - 1)):
 
-            for cur_start in xrange(block_length + 1):
+            for cur_start in range(block_length + 1):
 
-                for cur_end in xrange(cur_start, block_length + 1):
+                for cur_end in range(cur_start, block_length + 1):
 
                     gamma = -float('inf')
-                    for next_start in xrange(block_length + 1):
-                        for next_end in xrange(next_start, block_length + 1):
+                    for next_start in range(block_length + 1):
+                        for next_end in range(next_start, block_length + 1):
                             log_prob = result[t + 1][next_start][next_end] + \
                                        emission_cache[t + 1][next_start][next_end] + \
                                        self.boundary_movement_model(cur_start - next_start, t, return_log=True) + \
@@ -413,23 +423,24 @@ class ClusterModel:
 
         position_posteriors = matrix(block_length + 1, block_length + 1, default=-float('inf'))
 
+        #2024.11.15 edited, all "xrange()" change to "range()" for Python3
         # add the current cluster posterior to the total cluster posterior
         peak_posteriors = matrix(n_timepoints, block_length, default=0)
-        for t in xrange(n_timepoints - 1):
+        for t in range(n_timepoints - 1):
             set_matrix(position_posteriors, -float('inf'))
             # update_info = []
-            dynamics_posterior = [[-float('inf')] * self.n_dynamics for _ in xrange(2)]
+            dynamics_posterior = [[-float('inf')] * self.n_dynamics for _ in range(2)]
 
-            dist_posteriors = [[[-float('inf')] * (block_length + 1) for _ in xrange(self.n_dynamics)] for _ in xrange(2)]
+            dist_posteriors = [[[-float('inf')] * (block_length + 1) for _ in range(self.n_dynamics)] for _ in range(2)]
 
-            for cur_start in xrange(block_length + 1):
+            for cur_start in range(block_length + 1):
 
-                for cur_end in xrange(cur_start, block_length + 1):
+                for cur_end in range(cur_start, block_length + 1):
 
-                    for next_start in xrange(block_length + 1):
+                    for next_start in range(block_length + 1):
                         start_dist = cur_start - next_start
 
-                        for next_end in xrange(next_start, block_length + 1):
+                        for next_end in range(next_start, block_length + 1):
                             end_dist = next_end - cur_end
 
                             log_prob = F[t][cur_start][cur_end] + \
@@ -455,18 +466,19 @@ class ClusterModel:
                                 dynamics_posterior[boundary_idx][dyn] = add_log_probs(dynamics_posterior[boundary_idx][dyn],
                                                                                       log_prob)
 
-            for boundary_idx in xrange(2):
+            #2024.11.15 edited, all "xrange()" change to "range()" for Python3
+            for boundary_idx in range(2):
                 dynamics_posterior[boundary_idx] = convert_and_normalize_log_posteriors(dynamics_posterior[boundary_idx])
 
                 # store the posteriors for each dynamic on each side
-                for dyn_idx in xrange(self.n_dynamics):
+                for dyn_idx in range(self.n_dynamics):
                     param_info[TOTAL_POSTERIORS_PER_DYNAMIC][dyn_idx][t] += dynamics_posterior[boundary_idx][dyn_idx]
 
                     dyn_dist_posteriors = convert_and_normalize_log_posteriors(dist_posteriors[boundary_idx][dyn_idx])
 
                     if dyn_idx > 0:
 
-                        for dist in xrange(1, len(dyn_dist_posteriors)):
+                        for dist in range(1, len(dyn_dist_posteriors)):
 
                             weight = dyn_dist_posteriors[dist] * dynamics_posterior[boundary_idx][dyn_idx]
 
@@ -475,12 +487,13 @@ class ClusterModel:
 
             convert_and_normalize_log_matrix(position_posteriors, math.e)
 
-            for start in xrange(block_length + 1):
-                for end in xrange(start, block_length + 1):
+            #2024.11.15 edited, all "xrange()" change to "range()" for Python3
+            for start in range(block_length + 1):
+                for end in range(start, block_length + 1):
 
                     weight = position_posteriors[start][end]
 
-                    for pos in xrange(start, end):
+                    for pos in range(start, end):
                         peak_posteriors[t][pos] += weight
 
                         # param_info[EMISSION_PARAMS][t][FOREGROUND_SIGNAL][MEAN] += weight * block_fgr[t][pos]
@@ -491,12 +504,13 @@ class ClusterModel:
         position_posteriors = matcopy(F[-1])
         convert_and_normalize_log_matrix(position_posteriors, math.e)
 
-        for start in xrange(block_length + 1):
-            for end in xrange(start, block_length + 1):
+        #2024.11.15 edited, all "xrange()" change to "range()" for Python3
+        for start in range(block_length + 1):
+            for end in range(start, block_length + 1):
 
                 weight = position_posteriors[start][end]
 
-                for pos in xrange(start, end):
+                for pos in range(start, end):
                     peak_posteriors[t][pos] += weight
 
                     # param_info[EMISSION_PARAMS][t][FOREGROUND_SIGNAL][MEAN] += weight * block_fgr[t][pos]
@@ -514,37 +528,38 @@ class ClusterModel:
 
         block_length = len(block[FOREGROUND_SIGNAL][0])
 
+        #2024.11.15 edited, all "xrange()" change to "range()" for Python3
         C_block_fgr = (ctypes.c_int * (n_timepoints * block_length))(*[block[FOREGROUND_SIGNAL][t][p]
-                                                                         for t in xrange(n_timepoints)
-                                                                         for p in xrange(block_length)])
+                                                                         for t in range(n_timepoints)
+                                                                         for p in range(block_length)])
 
         C_block_covariates = (C_DOUBLE * (n_timepoints * block_length * n_covariates))(*[
             block[BLOCK_COVARIATES][t][p][c]
-                for t in xrange(n_timepoints)
-                    for p in xrange(block_length)
-                        for c in xrange(n_covariates)
+                for t in range(n_timepoints)
+                    for p in range(block_length)
+                        for c in range(n_covariates)
         ])
 
         C_foreground_delta = (C_DOUBLE * n_timepoints)(*self.foreground_delta)
-        C_foreground_betas = (C_DOUBLE * (n_timepoints * n_covariates))(*[b for t in xrange(n_timepoints) for b in self.foreground_betas[t]])
+        C_foreground_betas = (C_DOUBLE * (n_timepoints * n_covariates))(*[b for t in range(n_timepoints) for b in self.foreground_betas[t]])
 
         C_background_delta = (C_DOUBLE * n_timepoints)(*self.background_delta)
-        C_background_betas = (C_DOUBLE * (n_timepoints * n_covariates))(*[b for t in xrange(n_timepoints) for b in self.background_betas[t]])
+        C_background_betas = (C_DOUBLE * (n_timepoints * n_covariates))(*[b for t in range(n_timepoints) for b in self.background_betas[t]])
 
         # the priors array
         C_priors = (C_DOUBLE * (n_dynamics * (n_timepoints - 1)))\
             (*[self.dynamic_priors[d_idx][t_idx]
-               for d_idx in xrange(n_dynamics)
-                for t_idx in xrange(n_timepoints - 1)])
+               for d_idx in range(n_dynamics)
+                for t_idx in range(n_timepoints - 1)])
 
         # C_lambdas = (C_DOUBLE * (self.n_dynamics * 2 * (n_timepoints - 1))) \
         #                                 (*[l for dynamic_lambdas in self.lambdas for l in dynamic_lambdas])
 
         C_dynamics_params = (C_DOUBLE * (self.n_dynamics * self.n_dynamics_params * (n_timepoints - 1))) \
                                         (*[self.dynamics_params[dyn][t][p_idx]
-                                           for dyn in xrange(self.n_dynamics)
-                                                for t in xrange(self.n_timepoints - 1)
-                                                    for p_idx in xrange(self.n_dynamics_params)])
+                                           for dyn in range(self.n_dynamics)
+                                                for t in range(self.n_timepoints - 1)
+                                                    for p_idx in range(self.n_dynamics_params)])
 
         return ( C_block_fgr,
                  C_block_covariates,
@@ -627,13 +642,13 @@ class ClusterModel:
 
         return C_log_likelihood[0]
 
-
+    #2024.11.15 edited, all "xrange()" change to "range()" for Python3
     def EM_step_split_on_positions_C(self, block, param_info):
 
         if block[BLOCK_LENGTH] > self.max_region_length:
             split_positions = block[SPLIT_POINT]
         else:
-            split_positions = xrange(block[BLOCK_LENGTH] + 1)
+            split_positions = range(block[BLOCK_LENGTH] + 1)
 
         log_likelihood = -float('inf')
 
@@ -709,11 +724,12 @@ class ClusterModel:
 
                     split_log_likelihood += C_log_likelihood[0]
                 else:
+                    #2024.11.15 edited, all "xrange()" change to "range()" for Python3
                     split_log_likelihood += sum(math.log(steady_prior) for steady_prior in self.dynamic_priors[0])
-                    fake_param_array = [1 if dynamics_idx == 0 else 0 for dynamics_idx in xrange(self.n_dynamics)
-                                        for timepoint_idx in xrange(self.n_timepoints - 1)] + \
-                                       [0 for dyn_idx in xrange(self.n_dynamics)
-                                        for t in xrange(self.n_timepoints - 1)]
+                    fake_param_array = [1 if dynamics_idx == 0 else 0 for dynamics_idx in range(self.n_dynamics)
+                                        for timepoint_idx in range(self.n_timepoints - 1)] + \
+                                       [0 for dyn_idx in range(self.n_dynamics)
+                                        for t in range(self.n_timepoints - 1)]
 
                     split_param_arrays[split_idx].append((fake_param_array,
                                                             block[BLOCK_ID],
@@ -818,11 +834,12 @@ class ClusterModel:
 
                     split_log_likelihood += C_log_likelihood[0]
                 else:
+                    #2024.11.15 edited, all "xrange()" change to "range()" for Python3
                     split_log_likelihood += sum(math.log(steady_prior) for steady_prior in self.dynamic_priors[0])
-                    fake_param_array = [1 if dynamics_idx == 0 else 0 for dynamics_idx in xrange(self.n_dynamics)
-                                        for timepoint_idx in xrange(self.n_timepoints - 1)] + \
-                                       [0 for dyn_idx in xrange(self.n_dynamics)
-                                        for t in xrange(self.n_timepoints - 1)]
+                    fake_param_array = [1 if dynamics_idx == 0 else 0 for dynamics_idx in range(self.n_dynamics)
+                                        for timepoint_idx in range(self.n_timepoints - 1)] + \
+                                       [0 for dyn_idx in range(self.n_dynamics)
+                                        for t in range(self.n_timepoints - 1)]
 
                     split_param_arrays[split_idx].append((fake_param_array,
                                                             block[BLOCK_ID],
@@ -848,14 +865,15 @@ class ClusterModel:
 
         return log_likelihood
 
+    #2024.11.15 edited, all "xrange()" change to "range()" for Python3
     # def EM_step_split_on_every_position_C(self, block, param_info):
     #
     #     log_likelihood = -float('inf')
     #
     #     split_log_likelihoods = []
-    #     split_param_arrays = [[] for _ in xrange(block[BLOCK_LENGTH] - 1)]
+    #     split_param_arrays = [[] for _ in range(block[BLOCK_LENGTH] - 1)]
     #
-    #     for split_idx, split_point in enumerate(xrange(1, block[BLOCK_LENGTH])):
+    #     for split_idx, split_point in enumerate(range(1, block[BLOCK_LENGTH])):
     #         split_log_likelihood = 0
     #
     #         for side, side_start, side_end in [(LEFT_BOUNDARY, 0, split_point),
@@ -951,29 +969,31 @@ class ClusterModel:
     #
     #     return log_likelihood
 
+    #2024.11.15 edited, all "xrange()" change to "range()" for Python3
     def new_param_info(self, block=None):
 
-        return { DYNAMICS_PARAMS: [[[0.] * (self.n_dynamics_params + 1) for _ in xrange(self.n_timepoints - 1)]
-                                   for _ in xrange(self.n_dynamics)],
+        return { DYNAMICS_PARAMS: [[[0.] * (self.n_dynamics_params + 1) for _ in range(self.n_timepoints - 1)]
+                                   for _ in range(self.n_dynamics)],
 
                  EMISSION_PARAMS: [{FOREGROUND_SIGNAL: {MEAN: 0, EXPECTED_MEAN: 0}}
-                                    for _ in xrange(self.n_timepoints)],
+                                    for _ in range(self.n_timepoints)],
 
                  TOTAL_POSTERIORS_PER_DYNAMIC: matrix(self.n_dynamics, self.n_timepoints - 1),
                  PEAK_POSTERIORS: {block[BLOCK_ID]: matrix(self.n_timepoints, block[BLOCK_LENGTH])} if block is not None else {},
                  DYNAMICS_JUMP_POSTERIORS: {block[BLOCK_ID]: cube(self.n_dynamics, self.n_timepoints - 1, block[BLOCK_LENGTH] + 1)} if block is not None else {}
                 }
 
+    #2024.11.15 edited, all "xrange()" change to "range()" for Python3
     def add_param_info(self, from_info, to_info):
-        for d in xrange(self.n_dynamics):
-            for t in xrange(self.n_timepoints - 1):
-                for param_idx in xrange(self.n_dynamics_params + 1):
+        for d in range(self.n_dynamics):
+            for t in range(self.n_timepoints - 1):
+                for param_idx in range(self.n_dynamics_params + 1):
                     to_info[DYNAMICS_PARAMS][d][t][param_idx] += from_info[DYNAMICS_PARAMS][d][t][param_idx]
 
-            for t in xrange(self.n_timepoints - 1):
+            for t in range(self.n_timepoints - 1):
                 to_info[TOTAL_POSTERIORS_PER_DYNAMIC][d][t] += from_info[TOTAL_POSTERIORS_PER_DYNAMIC][d][t]
 
-        for t in xrange(self.n_timepoints):
+        for t in range(self.n_timepoints):
             for signal_type in [FOREGROUND_SIGNAL]:
                 for key in [MEAN, EXPECTED_MEAN]:
                     to_info[EMISSION_PARAMS][t][signal_type][key] += from_info[EMISSION_PARAMS][t][signal_type][key]
@@ -984,36 +1004,38 @@ class ClusterModel:
         for key in from_info[DYNAMICS_JUMP_POSTERIORS]:
             to_info[DYNAMICS_JUMP_POSTERIORS][key] = from_info[DYNAMICS_JUMP_POSTERIORS][key]
 
+    #2024.11.15 edited, all "xrange()" change to "range()" for Python3
     def clear_param_info(self, info):
-        for d in xrange(self.n_dynamics):
-            for t in xrange(self.n_timepoints - 1):
-                for param_idx in xrange(self.n_dynamics_params + 1):
+        for d in range(self.n_dynamics):
+            for t in range(self.n_timepoints - 1):
+                for param_idx in range(self.n_dynamics_params + 1):
                     info[DYNAMICS_PARAMS][d][t][param_idx] = 0
 
-            for t in xrange(self.n_timepoints - 1):
+            for t in range(self.n_timepoints - 1):
                 info[TOTAL_POSTERIORS_PER_DYNAMIC][d][t] = 0
 
-        for t in xrange(self.n_timepoints):
+        for t in range(self.n_timepoints):
             for signal_type in [FOREGROUND_SIGNAL]:
                 for key in [MEAN, EXPECTED_MEAN]:
                     info[EMISSION_PARAMS][t][signal_type][key] = 0
         info[PEAK_POSTERIORS] = {}
         info[DYNAMICS_JUMP_POSTERIORS] = {}
 
+    #2024.11.15 edited, all "xrange()" change to "range()" for Python3
     def param_info_from_array(self, param_info, param_array, block_id, block_length):
 
         # peak_posteriors = matrix(self.n_timepoints, block_length)
         # copy the noise parameters
-        for t in xrange(self.n_timepoints):
-            for p in xrange(block_length):
+        for t in range(self.n_timepoints):
+            for p in range(block_length):
                 param_info[PEAK_POSTERIORS][block_id][t][p] = param_array[t * block_length + p]
 
         # param_info[PEAK_POSTERIORS][block_id] = peak_posteriors
 
         # copy the expand parameters
         offset = block_length * self.n_timepoints
-        for dynamics_idx in xrange(self.n_dynamics):
-            for timepoint_idx in xrange(self.n_timepoints - 1):
+        for dynamics_idx in range(self.n_dynamics):
+            for timepoint_idx in range(self.n_timepoints - 1):
                 param_info[TOTAL_POSTERIORS_PER_DYNAMIC][dynamics_idx][timepoint_idx] = \
                     param_array[offset + dynamics_idx * (self.n_timepoints - 1) + timepoint_idx]
 
@@ -1021,57 +1043,59 @@ class ClusterModel:
 
         # dynamics_jump_posteriors = cube(self.n_dynamics, self.n_timepoints - 1, block_length + 1)
         # copy the noise parameters
-        for dyn_idx in xrange(1, self.n_dynamics):
-            for t in xrange(self.n_timepoints - 1):
+        for dyn_idx in range(1, self.n_dynamics):
+            for t in range(self.n_timepoints - 1):
                 djp_offset = offset + dyn_idx * (block_length + 1) * (self.n_timepoints - 1) + t * (block_length + 1)
 
-                for p in xrange(block_length + 1):
+                for p in range(block_length + 1):
                     param_info[DYNAMICS_JUMP_POSTERIORS][block_id][dyn_idx][t][p] = param_array[djp_offset + p]
 
         # param_info[DYNAMICS_JUMP_POSTERIORS][block_id] = dynamics_jump_posteriors
 
         return param_info
 
+    #2024.11.15 edited, all "xrange()" change to "range()" for Python3    
     def param_info_from_array_split(self, param_info, param_array, block_id, block_length, side, side_start, factor=1.):
 
         peak_posteriors = [0] * block_length
 
         # copy the noise parameters
-        for t in xrange(self.n_timepoints):
-            for p in xrange(block_length):
+        for t in range(self.n_timepoints):
+            for p in range(block_length):
                 peak_posteriors[p] = param_array[t * block_length + p]
 
             if side == LEFT_BOUNDARY:
                 peak_posteriors = list(reversed(peak_posteriors))
 
-            for p in xrange(block_length):
+            for p in range(block_length):
                 param_info[PEAK_POSTERIORS][block_id][t][side_start + p] += peak_posteriors[p] * factor
 
         # copy the expand parameters
         offset = block_length * self.n_timepoints
-        for dynamics_idx in xrange(self.n_dynamics):
-            for timepoint_idx in xrange(self.n_timepoints - 1):
+        for dynamics_idx in range(self.n_dynamics):
+            for timepoint_idx in range(self.n_timepoints - 1):
                 param_info[TOTAL_POSTERIORS_PER_DYNAMIC][dynamics_idx][timepoint_idx] += \
                     param_array[offset + dynamics_idx * (self.n_timepoints - 1) + timepoint_idx] * factor
 
         offset += self.n_dynamics * (self.n_timepoints - 1)
 
         # copy the jump posteriors
-        for dyn_idx in xrange(1, self.n_dynamics):
-            for t in xrange(self.n_timepoints - 1):
+        for dyn_idx in range(1, self.n_dynamics):
+            for t in range(self.n_timepoints - 1):
                 djp_offset = offset + dyn_idx * (block_length + 1) * (self.n_timepoints - 1) + t * (block_length + 1)
 
-                for p in xrange(block_length + 1):
+                for p in range(block_length + 1):
                     param_info[DYNAMICS_JUMP_POSTERIORS][block_id][dyn_idx][t][p] += param_array[djp_offset + p] * factor
 
         return param_info
 
+    #2024.11.15 edited, all "xrange()" change to "range()" for Python3
     # def param_info_from_array_split(self, param_info, param_array, block_id, block_length, side):
     #
     #     peak_posteriors = matrix(self.n_timepoints, block_length)
     #     # copy the noise parameters
-    #     for t in xrange(self.n_timepoints):
-    #         for p in xrange(block_length):
+    #     for t in range(self.n_timepoints):
+    #         for p in range(block_length):
     #             peak_posteriors[t][p] = param_array[t * block_length + p]
     #
     #     if side == LEFT_BOUNDARY:
@@ -1080,15 +1104,15 @@ class ClusterModel:
     #         flip = lambda a: a
     #
     #     if block_id not in param_info[PEAK_POSTERIORS]:
-    #         param_info[PEAK_POSTERIORS][block_id] = [[] for _ in xrange(self.n_timepoints)]
+    #         param_info[PEAK_POSTERIORS][block_id] = [[] for _ in range(self.n_timepoints)]
     #
-    #     for t in xrange(self.n_timepoints):
+    #     for t in range(self.n_timepoints):
     #         param_info[PEAK_POSTERIORS][block_id][t].extend(flip(peak_posteriors[t]))
     #
     #     # copy the expand parameters
     #     offset = block_length * self.n_timepoints
-    #     for dynamics_idx in xrange(self.n_dynamics):
-    #         for timepoint_idx in xrange(self.n_timepoints - 1):
+    #     for dynamics_idx in range(self.n_dynamics):
+    #         for timepoint_idx in range(self.n_timepoints - 1):
     #             param_info[TOTAL_POSTERIORS_PER_DYNAMIC][dynamics_idx][timepoint_idx] += \
     #                 param_array[offset + dynamics_idx * (self.n_timepoints - 1) + timepoint_idx]
     #
@@ -1097,28 +1121,29 @@ class ClusterModel:
     #     dynamics_jump_posteriors = cube(self.n_dynamics, self.n_timepoints - 1, block_length + 1)
     #
     #     # copy the noise parameters
-    #     for dyn_idx in xrange(1, self.n_dynamics):
-    #         for t in xrange(self.n_timepoints - 1):
+    #     for dyn_idx in range(1, self.n_dynamics):
+    #         for t in range(self.n_timepoints - 1):
     #             djp_offset = offset + dyn_idx * (block_length + 1) * (self.n_timepoints - 1) + t * (block_length + 1)
     #
-    #             for p in xrange(block_length + 1):
+    #             for p in range(block_length + 1):
     #                 dynamics_jump_posteriors[dyn_idx][t][p] = param_array[djp_offset + p]
     #
     #     if block_id not in param_info[DYNAMICS_JUMP_POSTERIORS]:
-    #         param_info[DYNAMICS_JUMP_POSTERIORS][block_id] = [[[] for _ in xrange(self.n_timepoints - 1)]
-    #                                                           for _ in xrange(self.n_dynamics)]
+    #         param_info[DYNAMICS_JUMP_POSTERIORS][block_id] = [[[] for _ in range(self.n_timepoints - 1)]
+    #                                                           for _ in range(self.n_dynamics)]
     #
-    #     for dyn_idx in xrange(self.n_dynamics):
-    #         for t in xrange(self.n_timepoints - 1):
+    #     for dyn_idx in range(self.n_dynamics):
+    #         for t in range(self.n_timepoints - 1):
     #             if len(param_info[DYNAMICS_JUMP_POSTERIORS][block_id][dyn_idx][t]) < block_length + 1:
     #                 diff_length = block_length + 1 - len(param_info[DYNAMICS_JUMP_POSTERIORS][block_id][dyn_idx][t])
     #                 param_info[DYNAMICS_JUMP_POSTERIORS][block_id][dyn_idx][t].extend([0] * diff_length)
     #
-    #             for p in xrange(block_length + 1):
+    #             for p in range(block_length + 1):
     #                 param_info[DYNAMICS_JUMP_POSTERIORS][block_id][dyn_idx][t][p] += dynamics_jump_posteriors[dyn_idx][t][p]
     #
     #     return param_info
 
+    #2024.11.15 edited, all "xrange()" change to "range()" for Python3
     def compute_FDR_threshold(self, blocks, fdr=0.01):
         echo('Computing FDR threshold')
         # self.n_threads = 1
@@ -1129,20 +1154,21 @@ class ClusterModel:
             _map = map
 
         CHUNK_SIZE = max(1, min(500, 1 + len(blocks) / self.n_threads))
-        no_peak_probs = [[] for _ in xrange(self.n_timepoints)]
+        no_peak_probs = [[] for _ in range(self.n_timepoints)]
         for batch_no_peak_probs in _map(worker,
                                         [(compute_no_peak_probability, self, batch, batch_no)
                                             for batch_no, batch in enumerate(chunks(blocks.values(), CHUNK_SIZE))]):
-            for t in xrange(self.n_timepoints):
+            for t in range(self.n_timepoints):
                 no_peak_probs[t].extend(batch_no_peak_probs[t])
 
         if self.n_threads > 1:
             pool.close()
 
-        print >>sys.stderr, "\n"
+        #print >>sys.stderr, "\n" #Python2
+        print("\n", file=sys.stderr) #2024.11.15 edited for Python3
         self.fdr_threshold_for_decoding = [None] * self.n_timepoints
 
-        for t in xrange(self.n_timepoints):
+        for t in range(self.n_timepoints):
             sorted_no_peak_probs = sorted(no_peak_probs[t])
             n = len(sorted_no_peak_probs)
 
@@ -1183,9 +1209,11 @@ class ClusterModel:
 
             param_info = self.new_param_info()
 
-            CHUNK_SIZE = max(1, min(500, 1 + len(blocks) / self.n_threads))
+            #CHUNK_SIZE = max(1, min(500, 1 + len(blocks) / self.n_threads)) #Python2
+            CHUNK_SIZE = max(1, min(500, 1 + len(blocks) // self.n_threads)) #2024.11.15 edited Python3
             echo('Total training examples=', len(blocks),
-                 'batches:', 1 + len(blocks) / CHUNK_SIZE,
+                 #'batches:', 1 + len(blocks) / CHUNK_SIZE, #Python2
+                 'batches:', 1 + len(blocks) // CHUNK_SIZE, #2024.11.15 edited Python3
                  'per_batch=', CHUNK_SIZE, level=echo_level)
 
             for batch_param_info, batch_underflows, batch_total_likelihood in \
@@ -1199,7 +1227,8 @@ class ClusterModel:
                 current_total_likelihood += batch_total_likelihood
 
             if not bruteforce_debug:
-                print >>sys.stderr, '\n'
+                #print >>sys.stderr, '\n' #Python2
+                print('\n', file=sys.stderr) #2024.11.15 edited for Python3
 
             # remove blocks that underflow from the training blocks
             if len(underflows) > 0:
@@ -1237,11 +1266,12 @@ class ClusterModel:
 
             # # update the priors
 
-            for t in xrange(n_timepoints - 1):
+            #2024.11.15 edited, all "xrange()" change to "range()" for Python3
+            for t in range(n_timepoints - 1):
 
-                total_p = sum(param_info[TOTAL_POSTERIORS_PER_DYNAMIC][d][t] for d in xrange(self.n_dynamics))
+                total_p = sum(param_info[TOTAL_POSTERIORS_PER_DYNAMIC][d][t] for d in range(self.n_dynamics))
 
-                new_priors = [(param_info[TOTAL_POSTERIORS_PER_DYNAMIC][d][t] / total_p) for d in xrange(self.n_dynamics)]
+                new_priors = [(param_info[TOTAL_POSTERIORS_PER_DYNAMIC][d][t] / total_p) for d in range(self.n_dynamics)]
 
                 # loop until all priors are updated to be equal to at least min_dinamic_prior
                 while any(p < self.min_dynamic_prior for p in new_priors):
@@ -1251,7 +1281,7 @@ class ClusterModel:
                     # compute the total posterior for the priors that will be updated since their updates
                     # are larger than the minimum prior
                     total_p_for_dyns_to_update = sum(param_info[TOTAL_POSTERIORS_PER_DYNAMIC][d][t]
-                                                     for d in xrange(self.n_dynamics)
+                                                     for d in range(self.n_dynamics)
                                                      if dyns_to_update[d])
 
                     # count the number of dynamics for which the prior will be fixed to the minimum prior
@@ -1259,24 +1289,24 @@ class ClusterModel:
                     if n_dyns_to_fix > 0:
                         echo('At time point', t, ', priors for the following dynamics will be set to',
                              self.min_dynamic_prior, ':',
-                             [self.dynamics[_d] for _d in xrange(self.n_dynamics) if not dyns_to_update[_d]])
+                             [self.dynamics[_d] for _d in range(self.n_dynamics) if not dyns_to_update[_d]])
 
                         # echo([(param_info[TOTAL_POSTERIORS_PER_DYNAMIC][d][t] / total_p)
-                        #               for d in xrange(self.n_dynamics)])
+                        #               for d in range(self.n_dynamics)])
 
                     # compute the denominator for the rest of the priors that will be updated
                     _lambda = total_p_for_dyns_to_update / (1 - n_dyns_to_fix * self.min_dynamic_prior)
 
-                    for d in xrange(self.n_dynamics):
+                    for d in range(self.n_dynamics):
                         if dyns_to_update[d]:
                             new_priors[d] = param_info[TOTAL_POSTERIORS_PER_DYNAMIC][d][t] / _lambda
                         else:
                             new_priors[d] = self.min_dynamic_prior
 
-                for d in xrange(self.n_dynamics):
+                for d in range(self.n_dynamics):
                     self.dynamic_priors[d][t] = new_priors[d]
 
-                # for d in xrange(self.n_dynamics):
+                # for d in range(self.n_dynamics):
                 #
                 #     # self.dynamic_priors[d][t] = param_info[TOTAL_POSTERIORS_PER_DYNAMIC][d][t] / total_p
                 #
@@ -1335,12 +1365,13 @@ class ClusterModel:
                                  for block_id in block_ids
                                  for p in peak_posteriors[block_id][timepoint_idx]])
 
+            #2024.11.15 edited, all "xrange()" change to "range()" for Python3
             def peak_covariates_as_np_array(blocks, timepoint_idx):
                 # converts the peak posteriors to a numpy array
                 return np.array([[p_covariates[cov_idx]
                                    for block_id in block_ids
                                     for p_covariates in blocks[block_id][BLOCK_COVARIATES][timepoint_idx]]
-                                 for cov_idx in xrange(self.n_covariates)])
+                                 for cov_idx in range(self.n_covariates)])
 
             def block_signal_as_np_array(blocks, timepoint_idx):
                 # converts the peak signal to numpy array
@@ -1357,7 +1388,7 @@ class ClusterModel:
                                    self.foreground_betas[t],
                                    self.background_betas[t],
                                    self.n_covariates)
-                                    for t in xrange(self.n_timepoints)]):
+                                    for t in range(self.n_timepoints)]):
 
                 echo('time point:', t, '\tmean peak %:', mean([sum(
                     max(0, min(weight, 1.)) for weight in param_info[PEAK_POSTERIORS][block_id][t]) / len(
@@ -1390,6 +1421,7 @@ class ClusterModel:
         if self.n_threads > 1:
             pool.close()
 
+    #2024.11.15 edited, all "xrange()" change to "range()" for Python3
     def EM_bruteforce_debug(self, all_blocks):
         """ This method is used only for debugging purposes """
 
@@ -1409,17 +1441,17 @@ class ClusterModel:
             block = all_blocks[block_id]
             block[BLOCK_LENGTH] = 20
             # block[SPLIT_POINT] = 3
-            block[FOREGROUND_SIGNAL] = [[1 for _ in xrange(block[BLOCK_LENGTH])] for _ in xrange(self.n_timepoints)]
+            block[FOREGROUND_SIGNAL] = [[1 for _ in range(block[BLOCK_LENGTH])] for _ in range(self.n_timepoints)]
 
-            # block[FOREGROUND_SIGNAL] = [[random.randint(0, 10) for _ in xrange(block[BLOCK_LENGTH])],
-            #                             [random.randint(0, 10) for _ in xrange(block[BLOCK_LENGTH])]]
-            block[BLOCK_COVARIATES] = [[[1.0, 1.0] for _ in xrange(block[BLOCK_LENGTH])] for _ in xrange(self.n_timepoints)]
+            # block[FOREGROUND_SIGNAL] = [[random.randint(0, 10) for _ in range(block[BLOCK_LENGTH])],
+            #                             [random.randint(0, 10) for _ in range(block[BLOCK_LENGTH])]]
+            block[BLOCK_COVARIATES] = [[[1.0, 1.0] for _ in range(block[BLOCK_LENGTH])] for _ in range(self.n_timepoints)]
 
             # block = {'block_offset': 20989800, 'block_end': 20992200, 'block_id': 'chr19-1869-1', 'is_subpeak': False, 'block_length': 5, 'block_covariates': [[[1.0], [1.0], [1.0], [1.0], [1.0]], [[1.0], [1.0], [1.0], [1.0], [1.0]]], 'split_point': 3, 'chromosome': 'chr19', 'foreground_signal': [[10, 5, 9, 6, 2], [6, 9, 0, 0, 6]]}
             # block = {'block_offset': 47914200, 'block_end': 47916400, 'block_id': 'chr19-5533-1', 'is_subpeak': False, 'block_length': 15,
             #          'block_covariates':
-            #              [[[1.0] for _ in xrange(9)],
-            #               # [[1.0] for _ in xrange(15)]
+            #              [[[1.0] for _ in range(9)],
+            #               # [[1.0] for _ in range(15)]
             #               ]
             # , 'split_point': 5, 'chromosome': 'chr19',
             #          'foreground_signal': [
@@ -1462,8 +1494,8 @@ class ClusterModel:
     def compute_posteriors(self, block):
         n_timepoints = self.n_timepoints
 
-        dynamics_posteriors = {LEFT_BOUNDARY: [{EXPAND: 0, CONTRACT: 0, STEADY: 0} for t in xrange(n_timepoints - 1)],
-                               RIGHT_BOUNDARY: [{EXPAND: 0, CONTRACT: 0, STEADY: 0} for t in xrange(n_timepoints - 1)]}
+        dynamics_posteriors = {LEFT_BOUNDARY: [{EXPAND: 0, CONTRACT: 0, STEADY: 0} for t in range(n_timepoints - 1)],
+                               RIGHT_BOUNDARY: [{EXPAND: 0, CONTRACT: 0, STEADY: 0} for t in range(n_timepoints - 1)]}
 
         block_fgr = block[FOREGROUND_SIGNAL]
 
@@ -1476,18 +1508,18 @@ class ClusterModel:
 
         # add the current cluster posterior to the total cluster posterior
 
-        for t in xrange(n_timepoints - 1):
+        for t in range(n_timepoints - 1):
 
-            t_dynamics_posteriors = [[-float('inf')] * self.n_dynamics for _ in xrange(2)]
+            t_dynamics_posteriors = [[-float('inf')] * self.n_dynamics for _ in range(2)]
 
-            for cur_start in xrange(block_length + 1):
+            for cur_start in range(block_length + 1):
 
-                for cur_end in xrange(cur_start, block_length + 1):
+                for cur_end in range(cur_start, block_length + 1):
 
-                    for next_start in xrange(cur_end + 1):
+                    for next_start in range(cur_end + 1):
                         start_dist = cur_start - next_start
 
-                        for next_end in xrange(max(next_start, cur_start), block_length + 1):
+                        for next_end in range(max(next_start, cur_start), block_length + 1):
                             end_dist = next_end - cur_end
 
                             log_prob = F[t][cur_start][cur_end] + \
@@ -1557,12 +1589,12 @@ class ClusterModel:
         dynamics_posteriors = {LEFT_BOUNDARY: [dict((k,
                                                      C_dynamics_posteriors[t * 2 * self.n_dynamics + dyn_idx])
                                                     for dyn_idx, k in enumerate([STEADY, EXPAND, CONTRACT]))
-                                               for t in xrange(self.n_timepoints - 1)],
+                                               for t in range(self.n_timepoints - 1)],
 
                                RIGHT_BOUNDARY: [dict((k,
                                                      C_dynamics_posteriors[t * 2 * self.n_dynamics + self.n_dynamics + dyn_idx])
                                                     for dyn_idx, k in enumerate([STEADY, EXPAND, CONTRACT]))
-                                               for t in xrange(self.n_timepoints - 1)]}
+                                               for t in range(self.n_timepoints - 1)]}
         return dynamics_posteriors
     
     
@@ -1623,7 +1655,7 @@ class ClusterModel:
 
                 dynamics_posteriors[side] = [dict((k, C_dynamics_posteriors[t * self.n_dynamics + dyn_idx])
                                                         for dyn_idx, k in enumerate([STEADY, EXPAND, CONTRACT]))
-                                                            for t in xrange(self.n_timepoints - 1)]
+                                                            for t in range(self.n_timepoints - 1)]
 
                 split_log_likelihood += C_total_log_likelihood[0]
             else:
@@ -1632,7 +1664,7 @@ class ClusterModel:
 
                 dynamics_posteriors[side] = [dict((k, 1 if k == STEADY else 0)
                                                   for dyn_idx, k in enumerate([STEADY, EXPAND, CONTRACT]))
-                                             for t in xrange(self.n_timepoints - 1)]
+                                             for t in range(self.n_timepoints - 1)]
 
         return split_log_likelihood, dynamics_posteriors
 
@@ -1659,7 +1691,7 @@ class ClusterModel:
                                                   )
                                                )
                                                 for dynamic in [STEADY, EXPAND, CONTRACT])
-                                            for t in xrange(self.n_timepoints - 1)]
+                                            for t in range(self.n_timepoints - 1)]
 
 
         return dynamics_posteriors
@@ -1674,18 +1706,18 @@ class ClusterModel:
         emission_cache = self.calculate_signal_cache(block_fgr, block[BLOCK_COVARIATES])
 
 
-        DP = [matrix(block_length + 1, block_length + 1, default=-float('inf')) for _ in xrange(n_timepoints)]
+        DP = [matrix(block_length + 1, block_length + 1, default=-float('inf')) for _ in range(n_timepoints)]
 
-        trace_start = [matrix(block_length + 1, block_length + 1, default=-float('inf')) for _ in xrange(n_timepoints)]
-        trace_end = [matrix(block_length + 1, block_length + 1, default=-float('inf')) for _ in xrange(n_timepoints)]
+        trace_start = [matrix(block_length + 1, block_length + 1, default=-float('inf')) for _ in range(n_timepoints)]
+        trace_end = [matrix(block_length + 1, block_length + 1, default=-float('inf')) for _ in range(n_timepoints)]
 
         DP[0] = matcopy(emission_cache[0])
         total_log_likelihood = float('-inf')
-        for t in xrange(1, n_timepoints):
+        for t in range(1, n_timepoints):
 
-            for cur_start in xrange(block_length + 1):
+            for cur_start in range(block_length + 1):
 
-                for cur_end in xrange(cur_start, block_length + 1):
+                for cur_end in range(cur_start, block_length + 1):
 
                     max_log_prob = -float('inf')
                     total_log_prob = -float('inf')
@@ -1693,8 +1725,8 @@ class ClusterModel:
                     best_prev_start = None
                     best_prev_end = None
 
-                    for prev_start in xrange(0, cur_end + 1):
-                        for prev_end in xrange(max(prev_start, cur_start), block_length + 1):
+                    for prev_start in range(0, cur_end + 1):
+                        for prev_end in range(max(prev_start, cur_start), block_length + 1):
 
                             log_prob = DP[t - 1][prev_start][prev_end] + \
                                        self.boundary_movement_model(prev_start - cur_start, t - 1, return_log=True) + \
@@ -1720,7 +1752,7 @@ class ClusterModel:
         positions = {LEFT_BOUNDARY: [None] * n_timepoints,
                      RIGHT_BOUNDARY: [None] * n_timepoints}
 
-        best_start, best_end = max([(s, e) for s in xrange(block_length + 1) for e in xrange(s, block_length + 1)],
+        best_start, best_end = max([(s, e) for s in range(block_length + 1) for e in range(s, block_length + 1)],
                                    #key=lambda (s, e): DP[n_timepoints - 1][s][e]) #Python 2
                                    key=lambda s_e: DP[n_timepoints - 1][s_e[0]][s_e[1]]) #2024.11.12 edited Python 3
 
@@ -1734,7 +1766,7 @@ class ClusterModel:
         left_trajectory = [None] * (n_timepoints - 1)
         right_trajectory = [None] * (n_timepoints - 1)
 
-        for t in reversed(xrange(1, n_timepoints)):
+        for t in reversed(range(1, n_timepoints)):
 
             prev_best_start = trace_start[t][best_start][best_end]
             prev_best_end = trace_end[t][best_start][best_end]
@@ -1753,7 +1785,7 @@ class ClusterModel:
         first_timepoint = None
         last_timepoint = None
 
-        for t in xrange(n_timepoints):
+        for t in range(n_timepoints):
             if positions[LEFT_BOUNDARY][t] != positions[RIGHT_BOUNDARY][t]:
                 if first_timepoint is None:
                     first_timepoint = t
@@ -1769,10 +1801,10 @@ class ClusterModel:
             flip = lambda a: a
 
         split_block = {FOREGROUND_SIGNAL: [flip(block[FOREGROUND_SIGNAL][t][side_start: side_end])
-                                            for t in xrange(self.n_timepoints)],
+                                            for t in range(self.n_timepoints)],
 
                        BLOCK_COVARIATES: [flip(block[BLOCK_COVARIATES][t][side_start: side_end])
-                                            for t in xrange(self.n_timepoints)],
+                                            for t in range(self.n_timepoints)],
 
                        CHROMOSOME: block[CHROMOSOME],
 
@@ -1863,9 +1895,9 @@ class ClusterModel:
                 if status == 1:
                     raise UnderflowException
 
-                positions[side] = [C_positions[t] for t in xrange(self.n_timepoints)]
+                positions[side] = [C_positions[t] for t in range(self.n_timepoints)]
 
-                trajectories[side] = [self.dynamics[C_trajectories[t]] for t in xrange(self.n_timepoints - 1)]
+                trajectories[side] = [self.dynamics[C_trajectories[t]] for t in range(self.n_timepoints - 1)]
 
                 if C_time_frame[0] != -1:
                     if first_timepoint is None:
@@ -1886,9 +1918,9 @@ class ClusterModel:
                 combo_likelihood += side_log_likelihood
                 total_log_likelihood += side_log_likelihood
 
-                positions[side] = [split_block[BLOCK_OFFSET] for _ in xrange(self.n_timepoints)]
+                positions[side] = [split_block[BLOCK_OFFSET] for _ in range(self.n_timepoints)]
 
-                trajectories[side] = [STEADY for t in xrange(self.n_timepoints - 1)]
+                trajectories[side] = [STEADY for t in range(self.n_timepoints - 1)]
 
         return (combo_likelihood,
                 total_log_likelihood,
@@ -1908,7 +1940,11 @@ class ClusterModel:
                                                          is_peak_timepoint=is_peak_timepoint,
                                                          path_method=clib.compute_Viterbi_path_split)
                        for split_point in block[SPLIT_POINT]]
-        return max(split_paths)
+        #return max(split_paths) #Python2
+        return max(split_paths, key=lambda x: (x[0], x[1])) 
+        #2024.11.18 edited for Python3:
+            # Compare `combo_likelihood` (first element of the tuple) first,
+            # then `total_log_likelihood` (second element of the tuple) if the first elements are equal.
 
     def compute_posterior_path_split_on_positions_C(self, block, is_peak_timepoint):
 
@@ -1920,7 +1956,11 @@ class ClusterModel:
                                                          is_peak_timepoint=is_peak_timepoint,
                                                          path_method=clib.compute_posterior_path_split)
                        for split_point in block[SPLIT_POINT]]
-        return max(split_paths)
+        #return max(split_paths) #Python2
+        return max(split_paths, key=lambda x: (x[0], x[1]))
+        #2024.11.18 edited for Python3:
+            # Compare `combo_likelihood` (first element of the tuple) first,
+            # then `total_log_likelihood` (second element of the tuple) if the first elements are equal.
 
     def compute_Viterbi_path_C(self, block, is_peak_timepoint):
 
@@ -1978,12 +2018,12 @@ class ClusterModel:
         if status == 1:
             raise UnderflowException
 
-        positions = {LEFT_BOUNDARY: [C_positions[t] for t in xrange(self.n_timepoints)],
-                     RIGHT_BOUNDARY: [C_positions[self.n_timepoints + t] for t in xrange(self.n_timepoints)]}
+        positions = {LEFT_BOUNDARY: [C_positions[t] for t in range(self.n_timepoints)],
+                     RIGHT_BOUNDARY: [C_positions[self.n_timepoints + t] for t in range(self.n_timepoints)]}
 
 
-        left_trajectory = [self.dynamics[C_trajectories[t]] for t in xrange(self.n_timepoints - 1)]
-        right_trajectory = [self.dynamics[C_trajectories[self.n_timepoints - 1 + t]] for t in xrange(self.n_timepoints - 1)]
+        left_trajectory = [self.dynamics[C_trajectories[t]] for t in range(self.n_timepoints - 1)]
+        right_trajectory = [self.dynamics[C_trajectories[self.n_timepoints - 1 + t]] for t in range(self.n_timepoints - 1)]
 
         first_timepoint = None if C_time_frame[0] == -1 else C_time_frame[0]
         last_timepoint = None if C_time_frame[1] == -1 else C_time_frame[1]
@@ -2029,7 +2069,9 @@ class ClusterModel:
                         left_trajectory[last_timepoint] = STEADY
                         right_trajectory[last_timepoint] = CONTRACT
 
-        elif first_timepoint > 0 and last_timepoint < self.n_timepoints - 1:
+        #elif first_timepoint > 0 and last_timepoint < self.n_timepoints - 1: #Python2
+        #2024.11.15 edited for Python3
+        elif first_timepoint is not None and last_timepoint is not None and first_timepoint > 0 and last_timepoint < self.n_timepoints - 1:
             # for intermediate singletons make "creation" and "removal" dynamics consistent
 
             if (left_trajectory[first_timepoint - 1] == STEADY and right_trajectory[last_timepoint] == STEADY or
@@ -2096,12 +2138,12 @@ class ClusterModel:
         if status == 1:
             raise UnderflowException
 
-        positions = {LEFT_BOUNDARY: [C_positions[t] for t in xrange(self.n_timepoints)],
-                     RIGHT_BOUNDARY: [C_positions[self.n_timepoints + t] for t in xrange(self.n_timepoints)]}
+        positions = {LEFT_BOUNDARY: [C_positions[t] for t in range(self.n_timepoints)],
+                     RIGHT_BOUNDARY: [C_positions[self.n_timepoints + t] for t in range(self.n_timepoints)]}
 
 
-        left_trajectory = [self.dynamics[C_trajectories[t]] for t in xrange(self.n_timepoints - 1)]
-        right_trajectory = [self.dynamics[C_trajectories[self.n_timepoints - 1 + t]] for t in xrange(self.n_timepoints - 1)]
+        left_trajectory = [self.dynamics[C_trajectories[t]] for t in range(self.n_timepoints - 1)]
+        right_trajectory = [self.dynamics[C_trajectories[self.n_timepoints - 1 + t]] for t in range(self.n_timepoints - 1)]
 
         first_timepoint = None if C_time_frame[0] == -1 else C_time_frame[0]
         last_timepoint = None if C_time_frame[1] == -1 else C_time_frame[1]
@@ -2115,7 +2157,7 @@ class ClusterModel:
         block_no_peak_probs = [None] * n_timepoints
 
         if block[BLOCK_LENGTH] > self.max_region_length:
-            split_no_peak_probs = [[] for _ in xrange(n_timepoints)]
+            split_no_peak_probs = [[] for _ in range(n_timepoints)]
             split_likelihoods = []
 
             for split_point in block[SPLIT_POINT]:
@@ -2178,24 +2220,24 @@ class ClusterModel:
 
                         total_split_log_likelihood += C_total_split_log_likelihood[0]
 
-                        for t in xrange(n_timepoints):
+                        for t in range(n_timepoints):
                             split_no_peak_likelihoods[t] += C_side_no_peak_likelihoods[t]
 
                     else:
                         side_log_likelihood = sum(math.log(steady_prior) for steady_prior in self.dynamic_priors[0])
-                        for t in xrange(n_timepoints):
+                        for t in range(n_timepoints):
                             split_no_peak_likelihoods[t] += side_log_likelihood
 
                         total_split_log_likelihood += side_log_likelihood
 
-                for t in xrange(n_timepoints):
+                for t in range(n_timepoints):
                     split_no_peak_probs[t].append(math.exp(split_no_peak_likelihoods[t] - total_split_log_likelihood))
 
                 split_likelihoods.append(total_split_log_likelihood)
 
             split_posteriors = convert_and_normalize_log_posteriors(split_likelihoods)
 
-            for t in xrange(n_timepoints):
+            for t in range(n_timepoints):
                 block_no_peak_probs[t] = sum(no_peak_prob * split_posterior
                                              for no_peak_prob, split_posterior
                                              in izip(split_no_peak_probs[t], split_posteriors))
@@ -2248,7 +2290,7 @@ class ClusterModel:
 
             total_log_likelihood = C_total_log_likelihood[0]
 
-            for t in xrange(n_timepoints):
+            for t in range(n_timepoints):
                 block_no_peak_probs[t] = math.exp(C_no_peak_likelihoods[t] - total_log_likelihood)
 
         return block_no_peak_probs
@@ -2368,12 +2410,13 @@ def compute_no_peak_probability(theModel, batch, batch_no):
     theModel.init_caches(batch)
     n_timepoints = theModel.n_timepoints
 
-    batch_no_peak_probabilities = [[] for _ in xrange(n_timepoints)]
-    print >>sys.stderr, ".",
+    batch_no_peak_probabilities = [[] for _ in range(n_timepoints)]
+    #print >>sys.stderr, ".", #Python2
+    print(".", file=sys.stderr), #2024.11.15 edited for Python3
 
     for block in batch:
             block_no_peak_probs = theModel.compute_no_peak_probability(block)
-            for t in xrange(n_timepoints):
+            for t in range(n_timepoints):
                 batch_no_peak_probabilities[t].append(block_no_peak_probs[t])
 
     theModel.free_caches()
@@ -2392,7 +2435,8 @@ def EM_batch(model, batch, batch_no):
 
     for b_idx, block in enumerate(batch):
         if b_idx % 100 == 1:
-            print >>sys.stderr, '.',
+            #print >>sys.stderr, '.', #Python2
+            print('.', file=sys.stderr), #2024.11.15 edited for Python3
 
         block_likelihood = None
 
@@ -2414,7 +2458,7 @@ def EM_batch(model, batch, batch_no):
             print('underflow:', batch_no, b_idx, block)
             underflows.append(block[BLOCK_ID])
 
-        if any(math.isnan(v) or math.isinf(v) for d in xrange(model.n_dynamics) for v in block_param_info[TOTAL_POSTERIORS_PER_DYNAMIC][d]):
+        if any(math.isnan(v) or math.isinf(v) for d in range(model.n_dynamics) for v in block_param_info[TOTAL_POSTERIORS_PER_DYNAMIC][d]):
             print(b_idx, block[BLOCK_ID], block)
             exit(1)
 
@@ -2452,7 +2496,7 @@ def extract_blocks(blocks_fname,
 
         _blocks = sorted(_blocks)
 
-        for i in xrange(len(_blocks)):
+        for i in range(len(_blocks)):
             chrom, start, end, reg_id = _blocks[i]
 
             if i == 0:
@@ -2480,7 +2524,7 @@ def extract_blocks(blocks_fname,
             if chrom not in block_bins:
                 block_bins[chrom] = []
 
-            for bin_start in xrange((start / bin_size) * bin_size,
+            for bin_start in range((start / bin_size) * bin_size,
                                     (end / bin_size) * bin_size + 1,
                                     bin_size):
 
@@ -2529,7 +2573,7 @@ def extract_blocks(blocks_fname,
             expected_reads_per_bin = BGR_PSEUDO_COUNT + (n_fgr_reads / float(n_bgr_reads)) * \
                                                         float(sum(bgr_read_count[source][SIGNAL])) / block_length
 
-            for p in xrange(block_length):
+            for p in range(block_length):
                 all_blocks[source][BLOCK_COVARIATES][t_idx][p][0] = math.log(expected_reads_per_bin)
 
     return all_blocks
@@ -2537,9 +2581,11 @@ def extract_blocks(blocks_fname,
 
 def store_classification(theModel, full_output_fname, out_fnames, blocks, batch_no, output_empty_blocks):
 
-    out_files = [open_file(fname + '.' + str(batch_no) + '.gz', 'w') for fname in out_fnames]
+    #out_files = [open_file(fname + '.' + str(batch_no) + '.gz', 'w') for fname in out_fnames] #Python2
+    out_files = [open_file(fname + '.' + str(batch_no) + '.gz', 'wb') for fname in out_fnames] #2024.11.18 edited for Python3
 
-    full_output_f = open_file(full_output_fname + '.' + str(batch_no) + '.gz', 'w')
+    #full_output_f = open_file(full_output_fname + '.' + str(batch_no) + '.gz', 'w') #Python2
+    full_output_f = open_file(full_output_fname + '.' + str(batch_no) + '.gz', 'wb') #2024.11.18 edited for Python3
 
     theModel.init_caches(blocks)
 
@@ -2549,7 +2595,8 @@ def store_classification(theModel, full_output_fname, out_fnames, blocks, batch_
         chrom = block[CHROMOSOME]
 
         if reg_no % 500 == 0:
-            print >> sys.stderr, '.',
+            #print >> sys.stderr, '.', #Python2
+            print('.', file=sys.stderr), #2024.11.15 edited for Python3
 
         if block[BLOCK_LENGTH] > theModel.max_region_length:
 
@@ -2564,7 +2611,7 @@ def store_classification(theModel, full_output_fname, out_fnames, blocks, batch_
 
         dynamics_posteriors = posteriors_method(block)
         is_peak_timepoint = [int(no_peak_posteriors[t] <= theModel.fdr_threshold_for_decoding[t])
-                              for t in xrange(theModel.n_timepoints)]
+                              for t in range(theModel.n_timepoints)]
 
         (combo_likelihood,
          total_log_likelihood,
@@ -2578,7 +2625,7 @@ def store_classification(theModel, full_output_fname, out_fnames, blocks, batch_
             if first_timepoint is None:
                 first_timepoint = last_timepoint = -1
 
-            for t_idx in xrange(theModel.n_timepoints - 1):
+            for t_idx in range(theModel.n_timepoints - 1):
                 if t_idx < first_timepoint - 1 or t_idx > last_timepoint:
                     left_trajectory[t_idx] = 'x'
                     right_trajectory[t_idx] = 'x'
@@ -2586,7 +2633,7 @@ def store_classification(theModel, full_output_fname, out_fnames, blocks, batch_
             left_trajectory_label = '-'.join(left_trajectory)
             right_trajectory_label = '-'.join(right_trajectory)
 
-            for t_idx in xrange(first_timepoint, last_timepoint + 1):
+            for t_idx in range(first_timepoint, last_timepoint + 1):
                 f = out_files[t_idx]
                 if t_idx == first_timepoint:
                     if first_timepoint != last_timepoint:
@@ -2601,7 +2648,7 @@ def store_classification(theModel, full_output_fname, out_fnames, blocks, batch_
 
                 # skip empty peaks in the middle of the time course
                 if positions[LEFT_BOUNDARY][t_idx] != positions[RIGHT_BOUNDARY][t_idx]:
-                    f.write('\t'.join(map(str, [chrom,
+                    f.write(('\t'.join(map(str, [chrom,
 
                                                 positions[LEFT_BOUNDARY][t_idx],
                                                 positions[RIGHT_BOUNDARY][t_idx],
@@ -2614,9 +2661,10 @@ def store_classification(theModel, full_output_fname, out_fnames, blocks, batch_
                                                 positions[LEFT_BOUNDARY][t_idx],
                                                 positions[RIGHT_BOUNDARY][t_idx],
 
-                                                peak_color])) + '\n')
+                                                #peak_color])) + '\n') #Python2
+                                                peak_color])) + '\n').encode('utf-8')) #2024.11.15&11.18 edited for Python3
 
-            full_output_f.write('\t'.join(map(str, [chrom,
+            full_output_f.write(('\t'.join(map(str, [chrom,
                                                     min(positions[LEFT_BOUNDARY]),
                                                     max(positions[RIGHT_BOUNDARY]),
                                                     block_id,
@@ -2628,7 +2676,8 @@ def store_classification(theModel, full_output_fname, out_fnames, blocks, batch_
                                                     'posteriors:' + str(dynamics_posteriors),
                                                     'predicted_starts:' + ','.join(map(str, positions[LEFT_BOUNDARY])),
                                                     'predicted_ends:' + ','.join(map(str, positions[RIGHT_BOUNDARY]))
-                                                     ])) + '\n')
+                                                     #])) + '\n') #Python2
+                                                     ])) + '\n').encode('utf-8')) #2024.11.15&11.18 edited for Python3
 
     theModel.free_caches()
     map(lambda f: f.close(), out_files)
@@ -2656,15 +2705,17 @@ def call_boundary_dynamics(blocks,
                            update_priors=True,
                            min_dynamic_prior=0.0):
 
-    _blk = blocks.values()[0]
+    #_blk = blocks.values()[0] #Python2
+    _blk = list(blocks.values())[0] #2024.11.15 edit, Python3
     n_timepoints = len(_blk[FOREGROUND_SIGNAL])
     n_covariates = len(_blk[BLOCK_COVARIATES][0][0])
 
     echo('Total blocks:', len(blocks))
-    echo('Max block length:', max(b[BLOCK_LENGTH] for b in blocks.itervalues()))
+    #echo('Max block length:', max(b[BLOCK_LENGTH] for b in blocks.itervalues())) #Python2
+    echo('Max block length:', max(b[BLOCK_LENGTH] for b in blocks.values())) #2024.11.15 edit: Python3 use 'values()'
     echo('Blocks longer than %d bins:' % max_region_length,
-         len([1 for b in blocks.itervalues() if b[BLOCK_LENGTH] > max_region_length]))
-
+         #len([1 for b in blocks.itervalues() if b[BLOCK_LENGTH] > max_region_length])) #Python2
+         len([1 for b in blocks.values() if b[BLOCK_LENGTH] > max_region_length])) #2024.11.15 edit: Python3 use 'values()'
     echo('Sub-peak blocks :', len([b for b in blocks if blocks[b][IS_SUBPEAK]]))
 
     echo('n_timepoints:', n_timepoints)
@@ -2747,7 +2798,8 @@ def call_boundary_dynamics(blocks,
             append_and_unlink(fname + '.' + str(batch_no) + '.gz',
                               fname)
 
-    print >> sys.stderr, ''
+    #print >> sys.stderr, '' #Python2
+    print('', file=sys.stderr) #2024.11.15 edited for Python3
     map(lambda f: f.close(), out_files)
     full_output_f.close()
     echo('Output stored in:', out_prefix)

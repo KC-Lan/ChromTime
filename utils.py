@@ -120,9 +120,10 @@ def listdir(path, filter = None):
     return (os.path.join(path, fname) for fname in os.listdir(path) if filter is None or re.search(filter, fname))
 
 
+#2024.11.15 edited, all "xrange()" change to "range()" for Python3
 def matrix(n, m, default=0, dtype=None):
     if dtype is None:
-        return [[default for _ in xrange(m)] for _ in xrange(n)]
+        return [[default for _ in range(m)] for _ in range(n)]
     elif dtype == 'c_double':
 
         import numpy
@@ -132,13 +133,13 @@ def matrix(n, m, default=0, dtype=None):
 
 
 def set_matrix(m, value):
-    for i in xrange(len(m)):
-        for j in xrange(len(m[i])):
+    for i in range(len(m)):
+        for j in range(len(m[i])):
             m[i][j] = value
 
 
 def cube(n, m, k, default=0):
-    return [[[default for _ in xrange(k)] for _ in xrange(m)] for _ in xrange(n)]
+    return [[[default for _ in range(k)] for _ in range(m)] for _ in range(n)]
 
 
 def matcopy(mat):
@@ -370,12 +371,14 @@ def convert_and_normalize_log_matrix(log2_matrix, log_base):
 
     total_posterior_ratios = sum(posterior_ratios)
 
+    
     # in case of underflow return a uniform distribution
+    #2024.11.15 edited, all "xrange()" change to "range()" for Python3
     if total_posterior_ratios == 0 or math.isinf(1. / total_posterior_ratios):
         raise UnderflowException
         # scale = 1
-        # for i in xrange(n_rows):
-        #     for j in xrange(n_cols):
+        # for i in range(n_rows):
+        #     for j in range(n_cols):
         #
         #         if not math.isinf(log2_matrix[i][j]):
         #             log2_matrix[i][j] = 1. / len(all_values)
@@ -388,8 +391,8 @@ def convert_and_normalize_log_matrix(log2_matrix, log_base):
         # scale = log2(max_posterior) - max_log2_value
 
         # rescale cluster posteriors to sum to one
-        for i in xrange(n_rows):
-            for j in xrange(n_cols):
+        for i in range(n_rows):
+            for j in range(n_cols):
 
                 if not math.isinf(log2_matrix[i][j]):
                     log2_matrix[i][j] = max_posterior * log_base ** (log2_matrix[i][j] - max_log2_value)
@@ -436,10 +439,12 @@ def normalize(array):
 
     return [float(a) / total for a in array]
 
-
+#2024.11.15 edited, all "xrange()" change to "range()" for Python3
 def chunks(array, size):
-    for i in xrange(0, len(array), size):
-        yield array[i: i + size]
+    #for i in range(0, len(array), size): #Python2
+    for i in range(0, len(array), int(size)): #2024.11.15 edited for Python3
+        #yield array[i: i + size] #Python2
+        yield list(array)[i: i + int(size)] #2024.11.15 edited for Python3
 
 
 def open_file(fname, mode='r'):

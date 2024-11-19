@@ -8,6 +8,7 @@ from scipy.optimize import root
 from scipy.special import digamma, polygamma, gammaln
 import numpy as np
 
+#2024.11.15 edited: xrange -> range (Python 3)
 
 class NegBinomialOptimizationFailure(Exception):
     pass
@@ -43,7 +44,7 @@ def neg_bionomial_log_likelihood_derivative(par, blocks, peak_posteriors, timepo
         block_covariates = blocks[block_id][BLOCK_COVARIATES][timepoint_idx]
         block_peak_posteriors = peak_posteriors[block_id][timepoint_idx]
 
-        for pos_idx in xrange(len(block_signal)):
+        for pos_idx in range(len(block_signal)):
             p_signal = block_signal[pos_idx]
             p_covariates = block_covariates[pos_idx]
             if optimize_foreground:
@@ -60,7 +61,7 @@ def neg_bionomial_log_likelihood_derivative(par, blocks, peak_posteriors, timepo
                                  delta / xi -
                                  p_signal / xi)
 
-            for beta_idx in xrange(n_betas):
+            for beta_idx in range(n_betas):
                 d_betas[beta_idx] += weight * (p_signal * p_covariates[beta_idx] -
                                                (p_signal + delta) * p_covariates[beta_idx] * mu / xi)
 
@@ -135,7 +136,7 @@ def neg_bionomial_log_likelihood_derivative_Jacobian(par, blocks, peak_posterior
         block_covariates = blocks[block_id][BLOCK_COVARIATES][timepoint_idx]
         block_peak_posteriors = peak_posteriors[block_id][timepoint_idx]
 
-        for pos_idx in xrange(len(block_signal)):
+        for pos_idx in range(len(block_signal)):
             p_signal = block_signal[pos_idx]
             p_covariates = block_covariates[pos_idx]
 
@@ -153,7 +154,7 @@ def neg_bionomial_log_likelihood_derivative_Jacobian(par, blocks, peak_posterior
                                     1. / delta -
                                     1 / xi -
                                     (mu - p_signal) / (xi ** 2))
-            for beta_j in xrange(n_betas):
+            for beta_j in range(n_betas):
 
                 # update dF_{Delta_t}/dBeta_{t,j}
                 d_delta[1 + beta_j] += weight * p_covariates[beta_j] * mu * (
@@ -163,7 +164,7 @@ def neg_bionomial_log_likelihood_derivative_Jacobian(par, blocks, peak_posterior
                 d_betas[beta_j][0] += weight * p_covariates[beta_j] * mu * (p_signal - mu) / (xi ** 2)
 
                 # update dF_{Beta_{t,j}}/dBeta_{t,k}
-                for beta_k in xrange(n_betas):
+                for beta_k in range(n_betas):
                     d_betas[beta_j][1 + beta_k] += weight * p_covariates[beta_j] * (p_signal + delta) * (
                         -p_covariates[beta_k] * mu * delta / (xi ** 2)
                     )
@@ -310,7 +311,7 @@ def optimize_a_pair_of_NegBinomials_jointly(peak_signal_array, peak_covariates_m
     all_posteriors_array = np.concatenate((peak_posteriors_array, background_posteriors_array))
     all_signal_array = np.concatenate((peak_signal_array, peak_signal_array))
 
-    for iteration_idx in xrange(MAX_ITERATIONS):
+    for iteration_idx in range(MAX_ITERATIONS):
 
         if diff < MIN_DIFF:
             break
@@ -415,7 +416,7 @@ def optimize_a_pair_of_NegBinomials_jointly_shared_beta(peak_signal_array,
 
     cur_fgr_delta = cur_bgr_delta = init_delta
 
-    for iteration_idx in xrange(MAX_ITERATIONS):
+    for iteration_idx in range(MAX_ITERATIONS):
 
         if diff < MIN_DIFF:
             break
@@ -520,7 +521,7 @@ def optimize_NegBinomial(y, x, weights, init_betas):
 
     cur_delta, predicted_diff_means = optimize_Poisson(y, x, weights, 1)
 
-    for iteration_idx in xrange(MAX_ITERATIONS):
+    for iteration_idx in range(MAX_ITERATIONS):
 
         if diff < MIN_DIFF:
             break
@@ -614,7 +615,7 @@ def optimize_nb_R(y, x, weights):
 
     weights_float_vector = ro.FloatVector(weights)
 
-    names = ['v' + str(i) for i in xrange(len(x_float_vector))]
+    names = ['v' + str(i) for i in range(len(x_float_vector))]
     d = rlc.TaggedList(x_float_vector + [y_float_vector], names + ['y'])
     data = ro.DataFrame(d)
     formula = 'y ~ ' + '+ '.join(names) + ' - 1'

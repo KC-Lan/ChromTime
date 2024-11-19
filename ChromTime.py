@@ -12,6 +12,9 @@ from call_boundary_dynamics import call_boundary_dynamics
 
 import random
 
+#2024.11.15 edited, Python3 (reduce() is a built-in function in Python2)
+from functools import reduce
+
 # You should always set the random seed in the beginning of your software
 # in order to obtain reproducible results!
 # Here, we set the random seed to 42.
@@ -29,13 +32,15 @@ def read_chrom_lengths(fname, bin_size):
     with open(fname) as in_f:
         for line in in_f:
             chrom, size = line.strip().split()
-            chrom_lengths[chrom] = int(size) / bin_size
+            #chrom_lengths[chrom] = int(size) / bin_size #Python 2
+            chrom_lengths[chrom] = int(size) // bin_size #2024.11.15 edited: Python3 floor division return integer
     return chrom_lengths
 
 
 def read_aligned_reads(reads_fname, shift, bin_size, chrom_lengths=None):
-
-    read_counts = dict((c, [0] * chrom_lengths[c]) for c in chrom_lengths)
+    
+    #read_counts = dict((c, [0] * chrom_lengths[c]) for c in chrom_lengths)  #Python 2
+    read_counts = dict((c, [0] * int(chrom_lengths[c])) for c in chrom_lengths) #2024.11.15 edited
 
     total_reads = 0
 
@@ -56,9 +61,11 @@ def read_aligned_reads(reads_fname, shift, bin_size, chrom_lengths=None):
                 strand = buf[5]
 
             if strand == '+':
-                read_start = (start + shift) / bin_size
+                #read_start = (start + shift) / bin_size #Python 2
+                read_start = (start + shift) // bin_size #2024.11.15 edited
             else:
-                read_start = (end - shift) / bin_size
+                #read_start = (end - shift) / bin_size #Python 2
+                read_start = (end - shift) // bin_size #2024.11.15 edited
 
             if chrom not in read_counts or read_start < 0 or read_start >= len(read_counts[chrom]):
                 skipped += 1
@@ -76,7 +83,8 @@ def read_aligned_reads(reads_fname, shift, bin_size, chrom_lengths=None):
 def merge_intervals(intervals, min_gap=0):
     merged = []
 
-    for peak_idx in xrange(len(intervals)):
+    #2024.11.15 edited, all "xrange()" change to "range()" for Python3
+    for peak_idx in range(len(intervals)):
 
         if peak_idx == 0:
             merged.append(intervals[peak_idx])
@@ -101,9 +109,12 @@ def call_peaks(foreground_read_counts, total_foreground_reads,
                min_expected_reads,
                use_broad_window_for_background=False):
 
-    SHORT_WINDOW = max(1, 500 / bin_size)   # 1 kb / 2
-    MEDIUM_WINDOW = max(1, 2500 / bin_size)  # 5 kb / 2
-    LONG_WINDOW = max(1, 10000 / bin_size)  # 20 kb / 2
+    #SHORT_WINDOW = max(1, 500 / bin_size)   # 1 kb / 2  #Python2
+    #MEDIUM_WINDOW = max(1, 2500 / bin_size)  # 5 kb / 2  #Python2
+    #LONG_WINDOW = max(1, 10000 / bin_size)  # 20 kb / 2  #Python2
+    SHORT_WINDOW = max(1, 500 // bin_size)   # 1 kb / 2 #2024.11.15 edited for Python3
+    MEDIUM_WINDOW = max(1, 2500 // bin_size)  # 5 kb / 2 #2024.11.15 edited for Python3
+    LONG_WINDOW = max(1, 10000 // bin_size)  # 20 kb / 2 #2024.11.15 edited for Python3
 
     if use_broad_window_for_background:
         background_read_counts = foreground_read_counts
@@ -112,7 +123,8 @@ def call_peaks(foreground_read_counts, total_foreground_reads,
 
     pseudo_one_read = float(min_expected_reads * total_background_reads) / total_foreground_reads
 
-    n_total_bins = sum(len(bins) for bins in foreground_read_counts.itervalues())
+    #n_total_bins = sum(len(bins) for bins in foreground_read_counts.itervalues()) #Python 2
+    n_total_bins = sum(len(bins) for bins in foreground_read_counts.values()) #2024.11.15 edit: Python 3 use 'values()'
 
     mean_background_reads = float(total_background_reads) / n_total_bins
 
@@ -136,7 +148,8 @@ def call_peaks(foreground_read_counts, total_foreground_reads,
         long_window = sum(background_read_counts[chrom][:LONG_WINDOW])
         long_window_length = LONG_WINDOW
 
-        for bin_idx in xrange(len(foreground_read_counts[chrom])):
+        #for bin_idx in xrange(len(foreground_read_counts[chrom])): #Python2
+        for bin_idx in range(len(foreground_read_counts[chrom])): #2024.11.15 edit: Python3
 
             fgr_reads = foreground_read_counts[chrom][bin_idx]
 
@@ -228,7 +241,8 @@ def call_peaks(foreground_read_counts, total_foreground_reads,
         peak_start = None
         n_bins = len(peaks[chrom])
 
-        for bin_idx in xrange(n_bins):
+        #for bin_idx in xrange(n_bins): #Python2
+        for bin_idx in range(n_bins): #2024.11.15 edited, Python3
             is_significant = (chrom_peaks[bin_idx] <= q_value_strong)
 
             if not in_peak and is_significant:
@@ -239,7 +253,8 @@ def call_peaks(foreground_read_counts, total_foreground_reads,
                 peak_bins.append([peak_start, bin_idx])
                 in_peak = False
 
-        for peak_idx in xrange(len(peak_bins)):
+        #for peak_idx in xrange(len(peak_bins)): #Python2
+        for peak_idx in range(len(peak_bins)): #2024.11.15 edited, Python3
             peak_start, peak_end = peak_bins[peak_idx]
             boundary = peak_start
             while boundary >= 0 and chrom_peaks[boundary] <= p_value_extend:
@@ -305,7 +320,8 @@ def new_block(block_id,
                                      reduce(lambda x, y: x + y,
                                             [block[FOREGROUND_SIGNAL][t][min(p, block_length - 1)] /
                                              expected_read_counts[t][chrom][block_start + min(p, block_length - 1)]
-                                                for t in xrange(n_timepoints)], 0)))[:MAX_REGION_LENGTH]
+                                                #for t in xrange(n_timepoints)], 0)))[:MAX_REGION_LENGTH] #Python2
+                                                for t in range(n_timepoints)], 0)))[:MAX_REGION_LENGTH] #2024.11.15 edited, Python3
 
     return block
 
@@ -322,28 +338,36 @@ def find_best_splits(chrom,
     PEAK = 1
     FLANKING = 2
 
-    tracks = matrix(n_timepoints, part_end - part_start, default=FLANKING)
-
-    for t in xrange(n_timepoints):
-        for peak_idx in xrange(len(peaks_in_partition[t])):
+    #tracks = matrix(n_timepoints, part_end - part_start, default=FLANKING) #Python2
+    tracks = matrix(n_timepoints, int(part_end - part_start), default=FLANKING) #2024.11.19 edited for Python3
+    
+    #2024.11.15 edited, all "xrange()" change to "range()" for Python3
+    for t in range(n_timepoints):
+        for peak_idx in range(len(peaks_in_partition[t])):
             peak_start, peak_end = peaks_in_partition[t][peak_idx]
-            for j in xrange(peak_start, peak_end):
-                tracks[t][j - part_start] = PEAK
+            for j in range(peak_start, peak_end):
+                #tracks[t][j - part_start] = PEAK #Python2
+                tracks[t][int(j - part_start)] = PEAK #2024.11.19 edited for Python3: set [j - part_start] to integer
 
             if peak_idx > 0:
                 prev_end = peaks_in_partition[t][peak_idx - 1][1]
-                for j in xrange(prev_end, peak_start):
-                    tracks[t][j - part_start] = GAP
+                for j in range(prev_end, peak_start):
+                    #tracks[t][j - part_start] = GAP #Python2
+                    tracks[t][int(j - part_start)] = GAP #2024.11.19 edited for Python3: set [j - part_start] to integer
 
     merged_gaps = []
-    gap_counts = [[t for t in xrange(n_timepoints) if tracks[t][pos] in [GAP, FLANKING]]
-                  for pos in xrange(part_end - part_start)]
+    gap_counts = [[t for t in range(n_timepoints) if tracks[t][pos] in [GAP, FLANKING]]
+                  #for pos in range(part_end - part_start)] #Python2
+                  for pos in range(int(part_end - part_start))] #2024.11.19 edited for Python3
 
-    gap_only_timepoints = [[t for t in xrange(n_timepoints) if tracks[t][pos] == GAP]
-                                for pos in xrange(part_end - part_start)]
+    gap_only_timepoints = [[t for t in range(n_timepoints) if tracks[t][pos] == GAP]
+                                #for pos in range(part_end - part_start)] #Python2
+                                for pos in range(int(part_end - part_start))] #2024.11.19 edited for Python3
     gap_start = None
 
-    for pos in xrange(1, len(gap_counts)):
+    #2024.11.18 edited, "xrange()" change to "range()" for Python3
+    #for pos in xrange(1, len(gap_counts)): #Python2
+    for pos in range(1, len(gap_counts)):
         if len(gap_counts[pos]) > len(gap_counts[pos - 1]):
             gap_start = pos
 
@@ -356,7 +380,9 @@ def find_best_splits(chrom,
 
     for gap_start, gap_end, gap_timepoints in merged_gaps:
         # find the position with the minimum rescaled foreground signal
-        split_position = min(range(gap_start, gap_end), key=lambda p: min(foreground_read_counts[t][chrom][p]
+        #split_position = min(range(gap_start, gap_end), key=lambda p: min(foreground_read_counts[t][chrom][p] #Python2
+        ##2024.11.19 edited for Python3: set gap_start and gap_end to integer
+        split_position = min(range(int(gap_start), int(gap_end)), key=lambda p: min(foreground_read_counts[t][chrom][p]
                                                                           / expected_read_counts[t][chrom][p]
                                                                           for t in set(gap_timepoints)))
         part_splits.append(split_position)
@@ -388,7 +414,8 @@ def get_block_boundaries(peaks,
         EXTEND_WINDOW = 5
         prev_end = None
 
-        for i in xrange(len(merged_peaks)):
+        #2024.11.15 edited, all "xrange()" change to "range()" for Python3
+        for i in range(len(merged_peaks)):
             cur_start = merged_peaks[i][0]
 
             if i == 0:
@@ -411,10 +438,11 @@ def get_block_boundaries(peaks,
 
         peak_idx = [0] * n_timepoints
 
+        #2024.11.15 edited, all "xrange()" change to "range()" for Python3
         for part_no, (part_start, part_end) in enumerate(merged_peaks):
-            peaks_in_partition = [[] for _ in xrange(n_timepoints)]
+            peaks_in_partition = [[] for _ in range(n_timepoints)]
 
-            for t in xrange(n_timepoints):
+            for t in range(n_timepoints):
                 t_chrom_peaks = peaks[t].get(chrom, [])
 
                 first_peak = peak_idx[t]
@@ -432,7 +460,7 @@ def get_block_boundaries(peaks,
             else:
                 # ignore peaks shorter than 2 bins for splitting
                 MIN_PEAK_LENGTH = 400 / bin_size
-                for t in xrange(n_timepoints):
+                for t in range(n_timepoints):
                     if len(peaks_in_partition[t]) > 1:
                         peaks_in_partition[t] = [p for p in peaks_in_partition[t] if p[1] - p[0] >= MIN_PEAK_LENGTH]
 
@@ -445,11 +473,16 @@ def get_block_boundaries(peaks,
                                                     n_timepoints)
 
             split_block = len(partition_splits) > 2
-            for split_idx in xrange(len(partition_splits) - 1):
+            for split_idx in range(len(partition_splits) - 1):
 
                 block_start = partition_splits[split_idx]
                 block_end = partition_splits[split_idx + 1]
-
+                
+                #2024.11.15 edited
+                #TypeError: slice indices must be integers or None or have an __index__ method
+                block_start = int(block_start)
+                block_end = int(block_end)
+                
                 if split_block:
                     block_id = chrom + '-' + str(part_no + 1) + '-sub_' + str(split_idx + 1)
                 else:
@@ -865,7 +898,8 @@ if __name__ == '__main__':
                                             min_expected_reads=args.min_expected_reads,
                                             use_broad_window_for_background=args.use_broad_window_for_background)
 
-        with open(out_prefix + '.data.pickle', 'w') as outf:
+        #with open(out_prefix + '.data.pickle', 'w') as outf: #Python2
+        with open(out_prefix + '.data.pickle', 'wb') as outf: #2024.11.15 edited, Python3: write binary
             echo('Storing blocks in:', out_prefix + '.data.pickle')
             pickle.dump(blocks, outf, protocol=pickle.HIGHEST_PROTOCOL)
 
