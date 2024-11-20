@@ -43,11 +43,14 @@ def read_aligned_reads(reads_fname, shift, bin_size, chrom_lengths=None):
     read_counts = dict((c, [0] * int(chrom_lengths[c])) for c in chrom_lengths) #2024.11.15 edited
 
     total_reads = 0
-
     echo('Reading reads from:', reads_fname)
     skipped = 0
     with open_file(reads_fname) as in_f:
         for line in in_f:
+            #2024.11.20 edited for Python3: 
+            #Decode bytes to string if needed (e.g., input is ".gz")
+            if isinstance(line, bytes):  
+                line = line.decode('utf-8')
             buf = line.strip().split()
 
             chrom = buf[0]
@@ -66,7 +69,7 @@ def read_aligned_reads(reads_fname, shift, bin_size, chrom_lengths=None):
             else:
                 #read_start = (end - shift) / bin_size #Python 2
                 read_start = (end - shift) // bin_size #2024.11.15 edited
-
+        
             if chrom not in read_counts or read_start < 0 or read_start >= len(read_counts[chrom]):
                 skipped += 1
                 continue
